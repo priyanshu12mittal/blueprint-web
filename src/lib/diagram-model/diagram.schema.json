@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://blueprint.local/schemas/diagram-v1.json",
+  "title": "Blueprint diagram v1",
+  "type": "object",
+  "required": ["schemaVersion", "meta", "model", "layout"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "meta": {
+      "type": "object",
+      "required": ["problemId", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "problemId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "basePackage": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$" }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/node" } },
+        "edges": { "type": "array", "maxItems": 300, "items": { "$ref": "#/$defs/edge" } }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "required": ["nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/point" } }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,64}$" },
+    "visibility": { "enum": ["public", "private", "protected", "package"] },
+    "typeRef": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "identifier": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "subpackage": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$" },
+    "cardinality": { "type": "string", "pattern": "^(\\*|[0-9]+(\\.\\.([0-9]+|\\*))?)$" },
+    "point": {
+      "type": "object",
+      "required": ["x", "y"],
+      "additionalProperties": false,
+      "properties": { "x": { "type": "number" }, "y": { "type": "number" } }
+    },
+    "param": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "type": { "$ref": "#/$defs/typeRef" }
+      }
+    },
+    "field": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/identifier" },
+        "type": { "$ref": "#/$defs/typeRef" },
+        "visibility": { "$ref": "#/$defs/visibility", "default": "private" },
+        "static": { "type": "boolean", "default": false },
+        "final": { "type": "boolean", "default": false }
+      }
+    },
+    "method": {
+      "type": "object",
+      "required": ["id", "name", "returns"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/identifier" },
+        "params": { "type": "array", "items": { "$ref": "#/$defs/param" }, "default": [] },
+        "returns": { "$ref": "#/$defs/typeRef" },
+        "visibility": { "$ref": "#/$defs/visibility", "default": "public" },
+        "static": { "type": "boolean", "default": false },
+        "abstract": { "type": "boolean", "default": false }
+      }
+    },
+    "constructor": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "params": { "type": "array", "items": { "$ref": "#/$defs/param" }, "default": [] },
+        "visibility": { "$ref": "#/$defs/visibility", "default": "public" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "kind", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["class", "abstract", "interface", "enum"] },
+        "name": { "$ref": "#/$defs/identifier" },
+        "stereotype": { "type": ["string", "null"], "maxLength": 40 },
+        "package": { "$ref": "#/$defs/subpackage" },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/field" }, "default": [] },
+        "methods": { "type": "array", "items": { "$ref": "#/$defs/method" }, "default": [] },
+        "constructors": { "type": "array", "items": { "$ref": "#/$defs/constructor" }, "default": [] },
+        "constants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "minItems": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "enum" } }, "required": ["kind"] },
+          "then": { "required": ["constants"] },
+          "else": { "not": { "required": ["constants"] } }
+        }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "required": ["id", "kind", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": ["association", "aggregation", "composition", "inheritance", "implementation", "dependency"]
+        },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "fromCardinality": { "$ref": "#/$defs/cardinality" },
+        "toCardinality": { "$ref": "#/$defs/cardinality" },
+        "label": { "type": "string", "maxLength": 40 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "enum": ["inheritance", "implementation", "dependency"] } },
+            "required": ["kind"]
+          },
+          "then": {
+            "not": { "anyOf": [{ "required": ["fromCardinality"] }, { "required": ["toCardinality"] }] }
+          }
+        }
+      ]
+    }
+  }
+}

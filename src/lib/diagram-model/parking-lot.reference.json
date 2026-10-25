@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "problemId": "parking-lot",
+    "title": "Parking Lot (reference solution)",
+    "createdAt": "2026-10-25T00:00:00Z",
+    "updatedAt": "2026-10-25T00:00:00Z"
+  },
+  "settings": { "basePackage": "com.blueprint.parkinglot" },
+  "model": {
+    "nodes": [
+      {
+        "id": "n_lot", "kind": "class", "name": "ParkingLot",
+        "fields": [
+          { "id": "f_lot_floors", "name": "floors", "type": "List<ParkingFloor>" },
+          { "id": "f_lot_pricing", "name": "pricingStrategy", "type": "PricingStrategy" }
+        ],
+        "constructors": [
+          { "id": "c_lot_1", "params": [
+            { "name": "floors", "type": "List<ParkingFloor>" },
+            { "name": "pricingStrategy", "type": "PricingStrategy" }
+          ] }
+        ],
+        "methods": [
+          { "id": "m_lot_park", "name": "parkVehicle", "params": [{ "name": "vehicle", "type": "Vehicle" }], "returns": "Ticket" },
+          { "id": "m_lot_vacate", "name": "vacateSpot", "params": [{ "name": "ticketNumber", "type": "String" }], "returns": "Receipt" }
+        ]
+      },
+      {
+        "id": "n_floor", "kind": "class", "name": "ParkingFloor",
+        "fields": [
+          { "id": "f_floor_number", "name": "floorNumber", "type": "int" },
+          { "id": "f_floor_spots", "name": "spots", "type": "Map<VehicleType, List<ParkingSpot>>" },
+          { "id": "f_floor_lock", "name": "lock", "type": "ReentrantLock", "final": true }
+        ],
+        "methods": [
+          { "id": "m_floor_get", "name": "getAvailableSpot", "params": [{ "name": "type", "type": "VehicleType" }], "returns": "Optional<ParkingSpot>" },
+          { "id": "m_floor_full", "name": "isFull", "returns": "boolean" }
+        ]
+      },
+      {
+        "id": "n_spot", "kind": "class", "name": "ParkingSpot",
+        "fields": [
+          { "id": "f_spot_id", "name": "spotId", "type": "String", "final": true },
+          { "id": "f_spot_type", "name": "type", "type": "VehicleType", "final": true },
+          { "id": "f_spot_occ", "name": "occupied", "type": "boolean" }
+        ],
+        "methods": [
+          { "id": "m_spot_occupy", "name": "occupy", "returns": "boolean" },
+          { "id": "m_spot_release", "name": "release", "returns": "void" }
+        ]
+      },
+      {
+        "id": "n_vehicle", "kind": "class", "name": "Vehicle",
+        "fields": [
+          { "id": "f_veh_plate", "name": "licensePlate", "type": "String", "final": true },
+          { "id": "f_veh_type", "name": "type", "type": "VehicleType", "final": true }
+        ]
+      },
+      { "id": "n_vtype", "kind": "enum", "name": "VehicleType", "constants": ["MOTORCYCLE", "CAR", "BUS"] },
+      {
+        "id": "n_ticket", "kind": "class", "name": "Ticket",
+        "fields": [
+          { "id": "f_tk_number", "name": "ticketNumber", "type": "String", "final": true },
+          { "id": "f_tk_entry", "name": "entryTime", "type": "Instant", "final": true },
+          { "id": "f_tk_spot", "name": "spotId", "type": "String", "final": true },
+          { "id": "f_tk_plate", "name": "vehiclePlate", "type": "String", "final": true }
+        ]
+      },
+      {
+        "id": "n_receipt", "kind": "class", "name": "Receipt",
+        "fields": [
+          { "id": "f_rc_number", "name": "ticketNumber", "type": "String", "final": true },
+          { "id": "f_rc_amount", "name": "amount", "type": "BigDecimal", "final": true },
+          { "id": "f_rc_duration", "name": "duration", "type": "Duration", "final": true }
+        ]
+      },
+      {
+        "id": "n_pricing", "kind": "interface", "name": "PricingStrategy", "package": "pricing",
+        "methods": [
+          { "id": "m_pr_fee", "name": "calculateFee", "params": [{ "name": "ticket", "type": "Ticket" }, { "name": "duration", "type": "Duration" }], "returns": "BigDecimal" }
+        ]
+      },
+      {
+        "id": "n_hourly", "kind": "class", "name": "HourlyPricingStrategy", "package": "pricing",
+        "fields": [{ "id": "f_hr_rate", "name": "hourlyRate", "type": "BigDecimal", "final": true }],
+        "constructors": [{ "id": "c_hr_1", "params": [{ "name": "hourlyRate", "type": "BigDecimal" }] }],
+        "methods": [
+          { "id": "m_hr_fee", "name": "calculateFee", "params": [{ "name": "ticket", "type": "Ticket" }, { "name": "duration", "type": "Duration" }], "returns": "BigDecimal" }
+        ]
+      },
+      {
+        "id": "n_surge", "kind": "class", "name": "SurgePricingStrategy", "package": "pricing",
+        "fields": [
+          { "id": "f_sg_base", "name": "baseStrategy", "type": "PricingStrategy", "final": true },
+          { "id": "f_sg_mult", "name": "surgeMultiplier", "type": "BigDecimal", "final": true }
+        ],
+        "constructors": [
+          { "id": "c_sg_1", "params": [
+            { "name": "baseStrategy", "type": "PricingStrategy" },
+            { "name": "surgeMultiplier", "type": "BigDecimal" }
+          ] }
+        ],
+        "methods": [
+          { "id": "m_sg_fee", "name": "calculateFee", "params": [{ "name": "ticket", "type": "Ticket" }, { "name": "duration", "type": "Duration" }], "returns": "BigDecimal" }
+        ]
+      }
+    ],
+    "edges": [
+      { "id": "e_lot_floor", "kind": "composition", "from": "n_lot", "to": "n_floor", "fromCardinality": "1", "toCardinality": "1..*" },
+      { "id": "e_floor_spot", "kind": "composition", "from": "n_floor", "to": "n_spot", "fromCardinality": "1", "toCardinality": "*" },
+      { "id": "e_lot_pricing", "kind": "association", "from": "n_lot", "to": "n_pricing", "fromCardinality": "*", "toCardinality": "1", "label": "prices with" },
+      { "id": "e_hourly_impl", "kind": "implementation", "from": "n_hourly", "to": "n_pricing" },
+      { "id": "e_surge_impl", "kind": "implementation", "from": "n_surge", "to": "n_pricing" },
+      { "id": "e_surge_wraps", "kind": "association", "from": "n_surge", "to": "n_pricing", "fromCardinality": "*", "toCardinality": "1", "label": "wraps" },
+      { "id": "e_lot_ticket", "kind": "dependency", "from": "n_lot", "to": "n_ticket", "label": "issues" },
+      { "id": "e_lot_receipt", "kind": "dependency", "from": "n_lot", "to": "n_receipt", "label": "returns" },
+      { "id": "e_veh_type", "kind": "association", "from": "n_vehicle", "to": "n_vtype", "fromCardinality": "*", "toCardinality": "1" },
+      { "id": "e_spot_type", "kind": "association", "from": "n_spot", "to": "n_vtype", "fromCardinality": "*", "toCardinality": "1" },
+      { "id": "e_floor_type", "kind": "association", "from": "n_floor", "to": "n_vtype", "fromCardinality": "*", "toCardinality": "1" }
+    ]
+  },
+  "layout": {
+    "nodes": {
+      "n_lot": { "x": 0, "y": 0 },
+      "n_vehicle": { "x": 0, "y": 340 },
+      "n_ticket": { "x": 0, "y": 520 },
+      "n_receipt": { "x": 0, "y": 720 },
+      "n_floor": { "x": 400, "y": 0 },
+      "n_spot": { "x": 400, "y": 300 },
+      "n_vtype": { "x": 400, "y": 540 },
+      "n_pricing": { "x": 820, "y": 0 },
+      "n_hourly": { "x": 820, "y": 240 },
+      "n_surge": { "x": 820, "y": 480 }
+    }
+  }
+}
